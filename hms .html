@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospital Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --surface3: #222d42;
+    --border: #2a3a58;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --danger: #ef4444;
+    --warn: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --heading: #f8fafc;
+    --card-glow: rgba(0,212,255,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -200px; right: -200px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ─── SCREEN SYSTEM ─── */
+  .screen { display: none; min-height: 100vh; position: relative; z-index: 1; }
+  .screen.active { display: flex; flex-direction: column; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ─── MAIN LOGIN ─── */
+  #loginScreen {
+    align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #0a0e1a 0%, #0f172a 50%, #0a0e1a 100%);
+  }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 100%; max-width: 460px;
+    box-shadow: 0 0 60px rgba(0,212,255,0.08), 0 20px 40px rgba(0,0,0,0.4);
+    text-align: center;
+  }
+  .hospital-logo {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 28px;
+    box-shadow: 0 0 30px rgba(0,212,255,0.3);
+  }
+  .login-title { font-size: 26px; font-weight: 800; color: var(--heading); margin-bottom: 4px; letter-spacing: -0.5px; }
+  .login-sub { color: var(--muted); font-size: 13px; margin-bottom: 32px; font-family: 'JetBrains Mono', monospace; }
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+  .role-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px; font-weight: 500;
+    transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .role-btn:hover { background: var(--surface3); border-color: var(--accent); color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,212,255,0.1); }
+  .role-btn .role-icon { font-size: 22px; }
+  .role-btn.exit-btn { grid-column: 1/-1; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #ef4444; }
+  .role-btn.exit-btn:hover { background: rgba(239,68,68,0.2); }
+
+  /* ─── AUTH MODAL ─── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; animation: fadeIn 0.2s; }
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    width: 360px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  }
+  .modal-title { font-size: 18px; font-weight: 700; color: var(--heading); margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input {
+    width: 100%; padding: 10px 14px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,255,0.1); }
+  .error-msg { color: var(--danger); font-size: 12px; margin-top: 8px; display: none; }
+  .btn-primary {
+    width: 100%; padding: 12px;
+    background: linear-gradient(135deg, var(--accent), #0099cc);
+    color: #000; font-weight: 700; font-size: 14px;
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.2s; margin-top: 4px;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,212,255,0.3); }
+  .btn-secondary {
+    width: 100%; padding: 10px;
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 13px;
+    transition: all 0.2s; margin-top: 8px;
+  }
+  .btn-secondary:hover { border-color: var(--muted); color: var(--text); }
+
+  /* ─── DASHBOARD LAYOUT ─── */
+  .dashboard {
+    flex: 1; display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 60px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ─── TOPBAR ─── */
+  .topbar {
+    grid-column: 1/-1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-logo { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .topbar-title { font-size: 15px; font-weight: 700; color: var(--heading); }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .welcome-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 13px; color: var(--accent); font-weight: 500; }
+  .logout-btn { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: 'Outfit', sans-serif; transition: all 0.2s; }
+  .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    overflow-y: auto;
+  }
+  .sidebar-section { margin-bottom: 8px; }
+  .sidebar-section-title { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 4px 20px 8px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    transition: all 0.15s; border-left: 2px solid transparent;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(0,212,255,0.08); color: var(--accent); border-left-color: var(--accent); }
+  .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  /* ─── MAIN CONTENT ─── */
+  .main-content { padding: 24px; overflow-y: auto; background: var(--bg); }
+
+  /* ─── CONTENT PANELS ─── */
+  .panel { display: none; animation: fadeIn 0.25s; }
+  .panel.active { display: block; }
+  .panel-header { margin-bottom: 20px; }
+  .panel-title { font-size: 22px; font-weight: 700; color: var(--heading); letter-spacing: -0.3px; }
+  .panel-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  /* ─── STATS CARDS ─── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    transition: transform 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); }
+  .stat-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .stat-value { font-size: 28px; font-weight: 800; color: var(--heading); margin: 4px 0 2px; font-family: 'JetBrains Mono', monospace; }
+  .stat-note { font-size: 12px; color: var(--muted); }
+  .stat-card.cyan { border-color: rgba(0,212,255,0.3); box-shadow: 0 0 20px rgba(0,212,255,0.05); }
+  .stat-card.cyan .stat-value { color: var(--accent); }
+  .stat-card.purple { border-color: rgba(124,58,237,0.3); box-shadow: 0 0 20px rgba(124,58,237,0.05); }
+  .stat-card.purple .stat-value { color: #a78bfa; }
+  .stat-card.green { border-color: rgba(16,185,129,0.3); box-shadow: 0 0 20px rgba(16,185,129,0.05); }
+  .stat-card.green .stat-value { color: var(--accent3); }
+  .stat-card.amber { border-color: rgba(245,158,11,0.3); }
+  .stat-card.amber .stat-value { color: var(--warn); }
+
+  /* ─── TABLES ─── */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 20px; }
+  .table-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .table-title { font-size: 14px; font-weight: 600; color: var(--heading); }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--surface2); }
+  th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap; }
+  td { padding: 12px 16px; font-size: 13px; border-top: 1px solid var(--border); }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* ─── BADGES ─── */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+  .badge-blue { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+  .badge-amber { background: rgba(245,158,11,0.1); color: var(--warn); border: 1px solid rgba(245,158,11,0.2); }
+  .badge-red { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+  .badge-purple { background: rgba(124,58,237,0.1); color: #a78bfa; border: 1px solid rgba(124,58,237,0.2); }
+
+  /* ─── DETAIL CARD ─── */
+  .detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .detail-key { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+  .detail-val { font-size: 14px; color: var(--heading); font-weight: 500; }
+
+  /* ─── FORM PANEL ─── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+  .form-submit { background: linear-gradient(135deg, var(--accent), #0099cc); color: #000; font-weight: 700; padding: 12px 28px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 14px; transition: all 0.2s; margin-top: 8px; }
+  .form-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,212,255,0.3); }
+  .success-msg { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #34d399; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-top: 16px; display: none; }
+
+  /* ─── BLOOD BANK ─── */
+  .blood-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .blood-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+  }
+  .blood-type { font-size: 22px; font-weight: 800; color: #f87171; margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+  .blood-units { font-size: 28px; font-weight: 800; color: var(--heading); }
+  .blood-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .blood-bar { height: 4px; background: var(--surface3); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+  .blood-fill { height: 100%; background: linear-gradient(90deg, #ef4444, #f97316); border-radius: 2px; transition: width 0.5s; }
+
+  /* ─── MEDICINE STOCK ─── */
+  .medicine-list { display: flex; flex-direction: column; gap: 8px; }
+  .medicine-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .medicine-name { flex: 1; font-weight: 500; font-size: 14px; }
+  .medicine-stock { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); width: 40px; text-align: right; }
+  .medicine-bar-wrap { flex: 2; height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+  .medicine-bar { height: 100%; border-radius: 3px; transition: width 0.5s; }
+
+  /* ─── PATIENT JOURNEY ─── */
+  .journey-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 12px; }
+  .journey-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .journey-patient { font-size: 16px; font-weight: 700; color: var(--heading); }
+  .journey-id { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .journey-timeline { display: flex; flex-direction: column; gap: 8px; }
+  .timeline-item { display: flex; gap: 12px; align-items: flex-start; }
+  .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex-shrink: 0; }
+  .timeline-text { font-size: 13px; color: var(--muted); }
+
+  /* ─── VITALS FORM ─── */
+  .vitals-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* ─── PHARMACIST ─── */
+  .pharm-stock { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .pharm-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  .pharm-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+  .pharm-qty { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: var(--accent); }
+
+  /* ─── APPOINTMENTS TABLE STATUS ─── */
+  .status-scheduled { color: var(--accent); }
+  .status-admitted { color: var(--warn); }
+  .status-completed { color: var(--accent3); }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    .dashboard { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .form-grid, .detail-grid, .vitals-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ─── ACTION BUTTONS ─── */
+  .action-btn { padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; font-family: 'Outfit', sans-serif; border: none; transition: all 0.15s; }
+  .action-btn-edit { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+  .action-btn-edit:hover { background: rgba(0,212,255,0.2); }
+  .action-btn-delete { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+  .action-btn-delete:hover { background: rgba(239,68,68,0.2); }
+  .action-btn-view { background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+  .action-btn-view:hover { background: rgba(16,185,129,0.2); }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 200;
+    background: var(--surface);
+    border: 1px solid var(--accent3);
+    color: #34d399;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    display: none;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .toast.error { border-color: var(--danger); color: #f87171; }
+</style>
+</head>
+<body>
+
+<!-- ─── MAIN LOGIN SCREEN ─── -->
+<div id="loginScreen" class="screen active">
+  <div class="login-card">
+    <div class="hospital-logo">🏥</div>
+    <div class="login-title">Welcome to SAS Hospitals!!!</div>
+    <div class="login-sub">A website for Hospital Management System</div>
+    <div class="role-grid">
+      <button class="role-btn" onclick="openAuthModal('patient')">
+        <span class="role-icon">🧑‍⚕️</span> Patient Login
+      </button>
+      <button class="role-btn" onclick="openAuthModal('doctor')">
+        <span class="role-icon">👨‍⚕️</span> Doctor Login
+      </button>
+      <button class="role-btn" onclick="openAuthModal('nurse')">
+        <span class="role-icon">👩‍⚕️</span> Nurse Login
+      </button>
+      <button class="role-btn" onclick="openAuthModal('receptionist')">
+        <span class="role-icon">🗓️</span> Receptionist Login
+      </button>
+      <button class="role-btn" onclick="openAuthModal('pharmacist')">
+        <span class="role-icon">💊</span> Pharmacist Login
+      </button>
+      <button class="role-btn" onclick="openAuthModal('admin')">
+        <span class="role-icon">🔐</span> Admin Login
+      </button>
+      <button class="role-btn exit-btn" onclick="alert('Thank you for using MediCore HMS!')">
+        ✕ Exit
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── AUTH MODAL ─── -->
+<div id="authModal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">Login</div>
+    <div id="modalFields"></div>
+    <div class="error-msg" id="modalError">Invalid credentials. Please try again.</div>
+    <button class="btn-primary" onclick="handleLogin()">Login</button>
+    <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ─── PATIENT DASHBOARD ─── -->
+<div id="patientDash" class="screen">
+  <div class="dashboard">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-logo">🏥</div>
+        <div class="topbar-title">MediCore HMS</div>
+      </div>
+      <div class="topbar-right">
+        <div class="welcome-badge">👋 Welcome, Sharu</div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Patient Portal</div>
+        <div class="nav-item active" onclick="switchPanel(this,'p-details')"><span class="nav-icon">👤</span> My Details</div>
+        <div class="nav-item" onclick="switchPanel(this,'p-appointments')"><span class="nav-icon">📅</span> Appointments</div>
+        <div class="nav-item" onclick="switchPanel(this,'p-records')"><span class="nav-icon">📋</span> Medical Records</div>
+        <div class="nav-item" onclick="switchPanel(this,'p-bill')"><span class="nav-icon">💳</span> My Bill</div>
+      </div>
+    </div>
+    <div class="main-content">
+      <!-- Patient Details -->
+      <div id="p-details" class="panel active">
+        <div class="panel-header"><div class="panel-title">Patient Details</div><div class="panel-sub">Patient ID: 101</div></div>
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-key">Patient ID</div><div class="detail-val mono">101</div></div>
+            <div class="detail-item"><div class="detail-key">Full Name</div><div class="detail-val">Sharu</div></div>
+            <div class="detail-item"><div class="detail-key">Date of Birth</div><div class="detail-val mono">2006-11-21</div></div>
+            <div class="detail-item"><div class="detail-key">Phone</div><div class="detail-val mono">9876543210</div></div>
+            <div class="detail-item"><div class="detail-key">Patient Type</div><div class="detail-val"><span class="badge badge-blue">Regular</span></div></div>
+            <div class="detail-item"><div class="detail-key">Category</div><div class="detail-val"><span class="badge badge-green">Outpatient</span></div></div>
+            <div class="detail-item"><div class="detail-key">Status</div><div class="detail-val">Treatment – 7 months pregnant</div></div>
+            <div class="detail-item"><div class="detail-key">Appointment Date</div><div class="detail-val mono">2025-03-11</div></div>
+            <div class="detail-item"><div class="detail-key">Follow-up (days)</div><div class="detail-val mono">10</div></div>
+            <div class="detail-item"><div class="detail-key">Medicines</div><div class="detail-val">Paracetamol, Vitamin C</div></div>
+            <div class="detail-item"><div class="detail-key">Bill Amount</div><div class="detail-val" style="color:var(--accent3)">Rs. 1,500.00</div></div>
+            <div class="detail-item"><div class="detail-key">Assigned Doctor</div><div class="detail-val">Dr. Shanthi</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- Patient Appointments -->
+      <div id="p-appointments" class="panel">
+        <div class="panel-header"><div class="panel-title">My Appointments</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Time</th><th>Doctor</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">2025-03-11</td><td class="mono">10:00</td><td>Dr. Shanthi</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Medical Records -->
+      <div id="p-records" class="panel">
+        <div class="panel-header"><div class="panel-title">Medical Records</div></div>
+        <div class="detail-card">
+          <div class="detail-key" style="margin-bottom:12px">Medical History</div>
+          <div class="journey-timeline">
+            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-text">Initial consultation with Dr. Shanthi</div></div>
+            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-text">Biopsy</div></div>
+            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-text">BP: 123, Temp: 123, HR: 123 | Date: 2026-04-20</div></div>
+          </div>
+          <div class="detail-key" style="margin-top:20px;margin-bottom:12px">Procedures</div>
+          <div class="journey-timeline">
+            <div class="timeline-item"><div class="timeline-dot" style="background:var(--warn)"></div><div class="timeline-text">Biopsy</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- Bill -->
+      <div id="p-bill" class="panel">
+        <div class="panel-header"><div class="panel-title">Current Bill</div></div>
+        <div class="stats-grid">
+          <div class="stat-card green"><div class="stat-label">Total Amount Due</div><div class="stat-value">1,500</div><div class="stat-note">Rs. — Outpatient</div></div>
+        </div>
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-key">Consultation</div><div class="detail-val">Rs. 500.00</div></div>
+            <div class="detail-item"><div class="detail-key">Medicines</div><div class="detail-val">Rs. 600.00</div></div>
+            <div class="detail-item"><div class="detail-key">Procedures</div><div class="detail-val">Rs. 400.00</div></div>
+            <div class="detail-item"><div class="detail-key">Total</div><div class="detail-val" style="color:var(--accent3);font-size:18px;font-weight:700">Rs. 1,500.00</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── DOCTOR DASHBOARD ─── -->
+<div id="doctorDash" class="screen">
+  <div class="dashboard">
+    <div class="topbar">
+      <div class="topbar-left"><div class="topbar-logo">🏥</div><div class="topbar-title">MediCore HMS</div></div>
+      <div class="topbar-right">
+        <div class="welcome-badge">👨‍⚕️ Dr. Shanthi</div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Doctor Portal</div>
+        <div class="nav-item active" onclick="switchPanel(this,'d-patients')"><span class="nav-icon">🧑‍⚕️</span> My Patients</div>
+        <div class="nav-item" onclick="switchPanel(this,'d-appointments')"><span class="nav-icon">📅</span> Appointments</div>
+        <div class="nav-item" onclick="switchPanel(this,'d-prescribe')"><span class="nav-icon">💊</span> Prescribe Medicine</div>
+        <div class="nav-item" onclick="switchPanel(this,'d-status')"><span class="nav-icon">✏️</span> Update Patient Status</div>
+        <div class="nav-item" onclick="switchPanel(this,'d-details')"><span class="nav-icon">👤</span> My Details</div>
+      </div>
+    </div>
+    <div class="main-content">
+      <!-- Doctor My Patients -->
+      <div id="d-patients" class="panel active">
+        <div class="panel-header"><div class="panel-title">My Patients</div><div class="panel-sub">4 patients assigned</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Status</th><th>Appointment</th><th>Bill (Rs.)</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">101</td><td>Sharu</td><td class="mono">9876543210</td><td>8 months pregnant</td><td class="mono">2025-03-11</td><td class="mono">1,500</td></tr>
+              <tr><td class="mono">103</td><td>Krithika</td><td class="mono">9012345678</td><td>Delivered a baby girl</td><td class="mono">2025-03-31</td><td class="mono">25,000</td></tr>
+              <tr><td class="mono">104</td><td>Nithya</td><td class="mono">9988776655</td><td>General consultation</td><td class="mono">2025-03-11</td><td class="mono">700</td></tr>
+              <tr><td class="mono">105</td><td>Sri</td><td class="mono">9988776644</td><td>General consultation</td><td class="mono">2025-04-15</td><td class="mono">800</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Doctor Appointments -->
+      <div id="d-appointments" class="panel">
+        <div class="panel-header"><div class="panel-title">Appointments</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Sharu</td><td class="mono">2025-03-11</td><td class="mono">10:00</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+              <tr><td>Krithika</td><td class="mono">2025-03-31</td><td class="mono">09:00</td><td><span class="badge badge-amber">Admitted</span></td></tr>
+              <tr><td>Nithya</td><td class="mono">2025-03-11</td><td class="mono">14:00</td><td><span class="badge badge-green">Completed</span></td></tr>
+              <tr><td>Sri</td><td class="mono">2025-04-15</td><td class="mono">15:30</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Prescribe Medicine -->
+      <div id="d-prescribe" class="panel">
+        <div class="panel-header"><div class="panel-title">Prescribe Medicine</div></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Patient ID</label><input class="form-input" id="prescribePatientId" placeholder="e.g. 101" type="text"></div>
+            <div class="form-group"><label class="form-label">Medicine</label><input class="form-input" id="prescribeMedicine" placeholder="e.g. Paracetamol" type="text"></div>
+            <div class="form-group" style="grid-column:1/-1"><label class="form-label">Dosage / Notes</label><input class="form-input" id="prescribeDosage" placeholder="e.g. 500mg twice daily"></div>
+          </div>
+          <button class="form-submit" onclick="prescribeMedicine()">Prescribe</button>
+          <div class="success-msg" id="prescribeSuccess">✅ Prescription added successfully!</div>
+        </div>
+      </div>
+      <!-- Update Status -->
+      <div id="d-status" class="panel">
+        <div class="panel-header"><div class="panel-title">Update Patient Status</div></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Patient ID</label><input class="form-input" id="statusPatientId" placeholder="e.g. 101" type="text"></div>
+            <div class="form-group"><label class="form-label">New Status</label><input class="form-input" id="statusNew" placeholder="e.g. 8 months pregnant" type="text"></div>
+          </div>
+          <button class="form-submit" onclick="updateStatus()">Update Status</button>
+          <div class="success-msg" id="statusSuccess">✅ Status updated successfully!</div>
+        </div>
+      </div>
+      <!-- Doctor Details -->
+      <div id="d-details" class="panel">
+        <div class="panel-header"><div class="panel-title">My Details</div></div>
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-key">Doctor ID</div><div class="detail-val mono">D1</div></div>
+            <div class="detail-item"><div class="detail-key">Name</div><div class="detail-val">Dr. Shanthi</div></div>
+            <div class="detail-item"><div class="detail-key">Specialization</div><div class="detail-val"><span class="badge badge-purple">Gynaecologist</span></div></div>
+            <div class="detail-item"><div class="detail-key">Experience</div><div class="detail-val">5 years</div></div>
+            <div class="detail-item"><div class="detail-key">Phone</div><div class="detail-val mono">934534530</div></div>
+            <div class="detail-item"><div class="detail-key">Date of Joining</div><div class="detail-val mono">2020-12-14</div></div>
+            <div class="detail-item"><div class="detail-key">Salary</div><div class="detail-val" style="color:var(--accent3)">Rs. 90,000 / month</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── NURSE DASHBOARD ─── -->
+<div id="nurseDash" class="screen">
+  <div class="dashboard">
+    <div class="topbar">
+      <div class="topbar-left"><div class="topbar-logo">🏥</div><div class="topbar-title">MediCore HMS</div></div>
+      <div class="topbar-right">
+        <div class="welcome-badge">👩‍⚕️ Nurse Mimi</div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Nurse Portal</div>
+        <div class="nav-item active" onclick="switchPanel(this,'n-patients')"><span class="nav-icon">🧑‍⚕️</span> Doctor's Patients</div>
+        <div class="nav-item" onclick="switchPanel(this,'n-vitals')"><span class="nav-icon">❤️</span> Update Vitals</div>
+        <div class="nav-item" onclick="switchPanel(this,'n-details')"><span class="nav-icon">👤</span> My Details</div>
+      </div>
+    </div>
+    <div class="main-content">
+      <div id="n-patients" class="panel active">
+        <div class="panel-header"><div class="panel-title">Assigned Doctor's Patients</div><div class="panel-sub">Dr. Shanthi's patients</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Status</th><th>Appointment</th><th>Bill (Rs.)</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">101</td><td>Sharu</td><td class="mono">9876543210</td><td>8 months pregnant</td><td class="mono">2025-03-11</td><td class="mono">1,500</td></tr>
+              <tr><td class="mono">103</td><td>Krithika</td><td class="mono">9012345678</td><td>Delivered a baby girl</td><td class="mono">2025-03-31</td><td class="mono">25,000</td></tr>
+              <tr><td class="mono">104</td><td>Nithya</td><td class="mono">9988776655</td><td>General consultation</td><td class="mono">2025-03-11</td><td class="mono">700</td></tr>
+              <tr><td class="mono">105</td><td>Sri</td><td class="mono">9988776644</td><td>General consultation</td><td class="mono">2025-04-15</td><td class="mono">800</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="n-vitals" class="panel">
+        <div class="panel-header"><div class="panel-title">Update Patient Vitals</div></div>
+        <div class="form-card">
+          <div class="form-group"><label class="form-label">Patient ID</label><input class="form-input" id="vitalsPatientId" placeholder="e.g. 101" type="text"></div>
+          <div class="vitals-grid">
+            <div class="form-group"><label class="form-label">Blood Pressure</label><input class="form-input" id="vitalsBP" placeholder="e.g. 120/80" type="text"></div>
+            <div class="form-group"><label class="form-label">Temperature (°F)</label><input class="form-input" id="vitalsTemp" placeholder="e.g. 98.6" type="text"></div>
+            <div class="form-group"><label class="form-label">Heart Rate (bpm)</label><input class="form-input" id="vitalsHR" placeholder="e.g. 72" type="text"></div>
+          </div>
+          <button class="form-submit" onclick="updateVitals()">Update Vitals</button>
+          <div class="success-msg" id="vitalsSuccess">✅ Vitals updated successfully!</div>
+        </div>
+      </div>
+      <div id="n-details" class="panel">
+        <div class="panel-header"><div class="panel-title">My Details</div></div>
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-key">Nurse ID</div><div class="detail-val mono">N1</div></div>
+            <div class="detail-item"><div class="detail-key">Name</div><div class="detail-val">Mimi</div></div>
+            <div class="detail-item"><div class="detail-key">Assisting Doctor</div><div class="detail-val">Dr. Shanthi (D1)</div></div>
+            <div class="detail-item"><div class="detail-key">Salary</div><div class="detail-val" style="color:var(--accent3)">Rs. 15,000 / month</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── RECEPTIONIST DASHBOARD ─── -->
+<div id="receptionistDash" class="screen">
+  <div class="dashboard">
+    <div class="topbar">
+      <div class="topbar-left"><div class="topbar-logo">🏥</div><div class="topbar-title">MediCore HMS</div></div>
+      <div class="topbar-right">
+        <div class="welcome-badge">🗓️ Meena</div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Reception</div>
+        <div class="nav-item active" onclick="switchPanel(this,'r-patients')"><span class="nav-icon">👥</span> All Patients</div>
+        <div class="nav-item" onclick="switchPanel(this,'r-appointments')"><span class="nav-icon">📅</span> Appointments</div>
+        <div class="nav-item" onclick="switchPanel(this,'r-register')"><span class="nav-icon">➕</span> Register Patient</div>
+        <div class="nav-item" onclick="switchPanel(this,'r-schedule')"><span class="nav-icon">🗓️</span> Schedule Appointment</div>
+        <div class="nav-item" onclick="switchPanel(this,'r-payment')"><span class="nav-icon">💳</span> Process Payment</div>
+        <div class="nav-item" onclick="switchPanel(this,'r-details')"><span class="nav-icon">👤</span> My Details</div>
+      </div>
+    </div>
+    <div class="main-content">
+      <div id="r-patients" class="panel active">
+        <div class="panel-header"><div class="panel-title">All Patients</div><div class="panel-sub">6 registered patients</div></div>
+        <div class="table-wrap" style="overflow-x:auto">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Type</th><th>Category</th><th>Status</th><th>Appointment</th><th>Medicines</th><th>Bill</th><th>Doctor</th></tr></thead>
+            <tbody id="receptionistPatientsTable">
+              <tr><td class="mono">101</td><td>Sharu</td><td class="mono">9876543210</td><td><span class="badge badge-blue">Regular</span></td><td><span class="badge badge-green">Outpatient</span></td><td>8 months pregnant</td><td class="mono">2025-03-11</td><td>Paracetamol, Vitamin C</td><td class="mono">1,500</td><td>Dr.Shanthi</td></tr>
+              <tr><td class="mono">102</td><td>Anto</td><td class="mono">9123456789</td><td><span class="badge badge-purple">Occasional</span></td><td><span class="badge badge-green">Outpatient</span></td><td>At delivery</td><td class="mono">2025-03-21</td><td>Ibuprofen</td><td class="mono">5,000</td><td>Dr.Tharu</td></tr>
+              <tr><td class="mono">103</td><td>Krithika</td><td class="mono">9012345678</td><td><span class="badge badge-blue">Regular</span></td><td><span class="badge badge-amber">Inpatient</span></td><td>Delivered a baby girl</td><td class="mono">2025-03-31</td><td>Calcium, Multivitamin</td><td class="mono">25,000</td><td>Dr.Shanthi</td></tr>
+              <tr><td class="mono">104</td><td>Nithya</td><td class="mono">9988776655</td><td><span class="badge badge-blue">Regular</span></td><td><span class="badge badge-green">Outpatient</span></td><td>General consultation</td><td class="mono">2025-03-11</td><td>Insulin</td><td class="mono">700</td><td>Dr.Krithika</td></tr>
+              <tr><td class="mono">105</td><td>Sri</td><td class="mono">9988776644</td><td><span class="badge badge-purple">Occasional</span></td><td><span class="badge badge-green">Outpatient</span></td><td>General consultation</td><td class="mono">2025-04-15</td><td>Lisinopril</td><td class="mono">800</td><td>Dr.Shanthi</td></tr>
+              <tr><td class="mono">106</td><td>Shiva</td><td class="mono">9988776633</td><td><span class="badge badge-blue">Regular</span></td><td><span class="badge badge-amber">Inpatient</span></td><td>Surgery scheduled</td><td class="mono">2025-04-27</td><td>Painkillers, Antibiotics</td><td class="mono">45,000</td><td>Dr.Tharu</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="r-appointments" class="panel">
+        <div class="panel-header"><div class="panel-title">All Appointments</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient</th><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Sharu</td><td>Dr.Shanthi</td><td class="mono">2025-03-11</td><td class="mono">10:00</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+              <tr><td>Anto</td><td>Dr.Tharu</td><td class="mono">2025-03-21</td><td class="mono">11:30</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+              <tr><td>Krithika</td><td>Dr.Shanthi</td><td class="mono">2025-03-31</td><td class="mono">09:00</td><td><span class="badge badge-amber">Admitted</span></td></tr>
+              <tr><td>Nithya</td><td>Dr.Shanthi</td><td class="mono">2025-03-11</td><td class="mono">14:00</td><td><span class="badge badge-green">Completed</span></td></tr>
+              <tr><td>Sri</td><td>Dr.Shanthi</td><td class="mono">2025-04-15</td><td class="mono">15:30</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+              <tr><td>Shiva</td><td>Dr.Tharu</td><td class="mono">2025-04-27</td><td class="mono">08:00</td><td><span class="badge badge-amber">Admitted</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="r-register" class="panel">
+        <div class="panel-header"><div class="panel-title">Register New Patient</div></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Patient ID</label><input class="form-input" id="regId" placeholder="e.g. 107" type="text"></div>
+            <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="regName" placeholder="Patient name" type="text"></div>
+            <div class="form-group"><label class="form-label">Date of Birth</label><input class="form-input" id="regDob" placeholder="YYYY-MM-DD" type="text"></div>
+            <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="regPhone" placeholder="10-digit number" type="text"></div>
+            <div class="form-group"><label class="form-label">Type</label>
+              <select class="form-input" id="regType"><option>Regular</option><option>Occasional</option></select>
+            </div>
+            <div class="form-group"><label class="form-label">Category</label>
+              <select class="form-input" id="regCategory"><option>Outpatient</option><option>Inpatient</option></select>
+            </div>
+            <div class="form-group"><label class="form-label">Status</label><input class="form-input" id="regStatus" placeholder="Current status" type="text"></div>
+            <div class="form-group"><label class="form-label">Appointment Date</label><input class="form-input" id="regApptDate" placeholder="YYYY-MM-DD" type="text"></div>
+            <div class="form-group"><label class="form-label">Follow-up / Stay Info</label><input class="form-input" id="regFollowup" placeholder="e.g. 10 days" type="text"></div>
+            <div class="form-group"><label class="form-label">Medicines</label><input class="form-input" id="regMeds" placeholder="e.g. Paracetamol" type="text"></div>
+            <div class="form-group"><label class="form-label">Bill Amount (Rs.)</label><input class="form-input" id="regBill" placeholder="e.g. 1500" type="number"></div>
+            <div class="form-group"><label class="form-label">Doctor ID</label><input class="form-input" id="regDoctorId" placeholder="e.g. D1" type="text"></div>
+          </div>
+          <button class="form-submit" onclick="registerPatient()">Register Patient</button>
+          <div class="success-msg" id="regSuccess">✅ Patient registered successfully!</div>
+        </div>
+      </div>
+      <div id="r-schedule" class="panel">
+        <div class="panel-header"><div class="panel-title">Schedule Appointment</div></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Patient ID</label><input class="form-input" id="schedPatientId" placeholder="e.g. 101" type="text"></div>
+            <div class="form-group"><label class="form-label">Doctor</label><select class="form-input" id="schedDoctor"><option>Dr.Shanthi</option><option>Dr.Tharu</option><option>Dr.Kumar</option><option>Dr.Krithika</option><option>Dr.Tharun</option></select></div>
+            <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="schedDate" type="date"></div>
+            <div class="form-group"><label class="form-label">Time</label><input class="form-input" id="schedTime" type="time"></div>
+          </div>
+          <button class="form-submit" onclick="scheduleAppointment()">Schedule</button>
+          <div class="success-msg" id="schedSuccess">✅ Appointment scheduled successfully!</div>
+        </div>
+      </div>
+      <div id="r-payment" class="panel">
+        <div class="panel-header"><div class="panel-title">Process Payment</div></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Patient ID</label><input class="form-input" id="payPatientId" placeholder="e.g. 101" type="text"></div>
+            <div class="form-group"><label class="form-label">Amount (Rs.)</label><input class="form-input" id="payAmount" placeholder="e.g. 1500" type="number"></div>
+            <div class="form-group"><label class="form-label">Payment Mode</label><select class="form-input" id="payMode"><option>Cash</option><option>Card</option><option>UPI</option><option>Insurance</option></select></div>
+          </div>
+          <button class="form-submit" onclick="processPayment()">Process Payment</button>
+          <div class="success-msg" id="paySuccess">✅ Payment processed successfully!</div>
+        </div>
+      </div>
+      <div id="r-details" class="panel">
+        <div class="panel-header"><div class="panel-title">My Details</div></div>
+        <div class="detail-card">
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-key">Receptionist ID</div><div class="detail-val mono">R1</div></div>
+            <div class="detail-item"><div class="detail-key">Name</div><div class="detail-val">Meena</div></div>
+            <div class="detail-item"><div class="detail-key">Salary</div><div class="detail-val" style="color:var(--accent3)">Rs. 20,000 / month</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── PHARMACIST DASHBOARD ─── -->
+<div id="pharmacistDash" class="screen">
+  <div class="dashboard">
+    <div class="topbar">
+      <div class="topbar-left"><div class="topbar-logo">🏥</div><div class="topbar-title">MediCore HMS</div></div>
+      <div class="topbar-right">
+        <div class="welcome-badge">💊 Pharmacist</div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Pharmacy</div>
+        <div class="nav-item active" onclick="switchPanel(this,'ph-stock')"><span class="nav-icon">📦</span> Medicine Stock</div>
+        <div class="nav-item" onclick="switchPanel(this,'ph-dispense')"><span class="nav-icon">💊</span> Dispense Medicine</div>
+        <div class="nav-item" onclick="switchPanel(this,'ph-update')"><span class="nav-icon">✏️</span> Update Stock</div>
+      </div>
+    </div>
+    <div class="main-content">
+      <div id="ph-stock" class="panel active">
+        <div class="panel-header"><div class="panel-title">Medicine Stock</div><div class="panel-sub">10 medicines in inventory</div></div>
+        <div class="medicine-list" id="medicineList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div id="ph-dispense" class="panel">
+        <div class="panel-header"><div class="panel-title">Dispense Medicine</div></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Patient ID</label><input class="form-input" id="dispPatientId" placeholder="e.g. 101" type="text"></div>
+            <div class="form-group"><label class="form-label">Medicine</label>
+              <select class="form-input" id="dispMedicine">
+                <option>Paracetamol</option><option>Ibuprofen</option><option>Vitamin C</option>
+                <option>Iron Tablets</option><option>Calcium</option><option>Multivitamin</option>
+                <option>Insulin</option><option>Lisinopril</option><option>Antibiotics</option><option>Painkillers</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Quantity</label><input class="form-input" id="dispQty" placeholder="e.g. 10" type="number"></div>
+          </div>
+          <button class="form-submit" onclick="dispenseMedicine()">Dispense</button>
+          <div class="success-msg" id="dispSuccess">✅ Medicine dispensed successfully!</div>
+        </div>
+      </div>
+      <div id="ph-update" class="panel">
+        <div class="panel-header"><div class="panel-title">Update Stock</div></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Medicine</label>
+              <select class="form-input" id="stockMedicine">
+                <option>Paracetamol</option><option>Ibuprofen</option><option>Vitamin C</option>
+                <option>Iron Tablets</option><option>Calcium</option><option>Multivitamin</option>
+                <option>Insulin</option><option>Lisinopril</option><option>Antibiotics</option><option>Painkillers</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">New Quantity</label><input class="form-input" id="stockQty" placeholder="e.g. 100" type="number"></div>
+          </div>
+          <button class="form-submit" onclick="updateStock()">Update</button>
+          <div class="success-msg" id="stockSuccess">✅ Stock updated successfully!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ADMIN DASHBOARD ─── -->
+<div id="adminDash" class="screen">
+  <div class="dashboard">
+    <div class="topbar">
+      <div class="topbar-left"><div class="topbar-logo">🏥</div><div class="topbar-title">MediCore HMS</div></div>
+      <div class="topbar-right">
+        <div class="welcome-badge">🔐 Admin</div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Overview</div>
+        <div class="nav-item active" onclick="switchPanel(this,'a-dashboard')"><span class="nav-icon">📊</span> Dashboard</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-appointments')"><span class="nav-icon">📅</span> All Appointments</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-reports')"><span class="nav-icon">📈</span> Detailed Reports</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-journey')"><span class="nav-icon">🗺️</span> Patient Journey</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Patients</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-patients')"><span class="nav-icon">👥</span> View Patients</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-add-patient')"><span class="nav-icon">➕</span> Create Patient</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Staff</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-doctors')"><span class="nav-icon">👨‍⚕️</span> Doctors</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-nurses')"><span class="nav-icon">👩‍⚕️</span> Nurses</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-receptionists')"><span class="nav-icon">🗓️</span> Receptionists</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-pharmacists')"><span class="nav-icon">💊</span> Pharmacists</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Inventory</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-bloodbank')"><span class="nav-icon">🩸</span> Blood Bank</div>
+        <div class="nav-item" onclick="switchPanel(this,'a-medicines')"><span class="nav-icon">📦</span> Medicine Stock</div>
+      </div>
+    </div>
+    <div class="main-content">
+      <!-- Admin Overview Dashboard -->
+      <div id="a-dashboard" class="panel active">
+        <div class="panel-header"><div class="panel-title">Admin Dashboard</div><div class="panel-sub">Hospital overview — MediCore HMS</div></div>
+        <div class="stats-grid">
+          <div class="stat-card cyan"><div class="stat-label">Total Patients</div><div class="stat-value">7</div><div class="stat-note">+1 new today</div></div>
+          <div class="stat-card amber"><div class="stat-label">Inpatients</div><div class="stat-value">2</div><div class="stat-note">Ward 30, 234</div></div>
+          <div class="stat-card green"><div class="stat-label">Outpatients</div><div class="stat-value">5</div><div class="stat-note">Scheduled</div></div>
+          <div class="stat-card purple"><div class="stat-label">Total Revenue</div><div class="stat-value">78.5K</div><div class="stat-note">Rs. 78,500</div></div>
+          <div class="stat-card"><div class="stat-label">Total Doctors</div><div class="stat-value">5</div></div>
+          <div class="stat-card"><div class="stat-label">Total Nurses</div><div class="stat-value">3</div></div>
+          <div class="stat-card"><div class="stat-label">Receptionists</div><div class="stat-value">2</div></div>
+          <div class="stat-card"><div class="stat-label">Pharmacists</div><div class="stat-value">2</div></div>
+        </div>
+      </div>
+
+      <!-- All Appointments -->
+      <div id="a-appointments" class="panel">
+        <div class="panel-header"><div class="panel-title">All Appointments</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient</th><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Sharu</td><td>Dr.Shanthi</td><td class="mono">2025-03-11</td><td class="mono">10:00</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+              <tr><td>Anto</td><td>Dr.Tharu</td><td class="mono">2025-03-21</td><td class="mono">11:30</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+              <tr><td>Krithika</td><td>Dr.Shanthi</td><td class="mono">2025-03-31</td><td class="mono">09:00</td><td><span class="badge badge-amber">Admitted</span></td></tr>
+              <tr><td>Nithya</td><td>Dr.Shanthi</td><td class="mono">2025-03-11</td><td class="mono">14:00</td><td><span class="badge badge-green">Completed</span></td></tr>
+              <tr><td>Sri</td><td>Dr.Shanthi</td><td class="mono">2025-04-15</td><td class="mono">15:30</td><td><span class="badge badge-blue">Scheduled</span></td></tr>
+              <tr><td>Shiva</td><td>Dr.Tharu</td><td class="mono">2025-04-27</td><td class="mono">08:00</td><td><span class="badge badge-amber">Admitted</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detailed Reports -->
+      <div id="a-reports" class="panel">
+        <div class="panel-header"><div class="panel-title">Detailed Reports</div></div>
+        <div class="stats-grid">
+          <div class="stat-card cyan"><div class="stat-label">Total Patients</div><div class="stat-value">7</div></div>
+          <div class="stat-card amber"><div class="stat-label">Inpatients</div><div class="stat-value">2</div></div>
+          <div class="stat-card green"><div class="stat-label">Outpatients</div><div class="stat-value">5</div></div>
+          <div class="stat-card"><div class="stat-label">Regular</div><div class="stat-value">4</div></div>
+          <div class="stat-card purple"><div class="stat-label">Occasional</div><div class="stat-value">3</div></div>
+          <div class="stat-card green"><div class="stat-label">Total Revenue</div><div class="stat-value">₹78.5K</div></div>
+          <div class="stat-card"><div class="stat-label">Appointments</div><div class="stat-value">6</div></div>
+          <div class="stat-card"><div class="stat-label">Total Staff</div><div class="stat-value">12</div></div>
+        </div>
+      </div>
+
+      <!-- Patient Journey -->
+      <div id="a-journey" class="panel">
+        <div class="panel-header"><div class="panel-title">Patient Journey Tracker</div></div>
+        <div id="journeyList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Admin View Patients -->
+      <div id="a-patients" class="panel">
+        <div class="panel-header"><div class="panel-title">All Patients</div></div>
+        <div class="table-wrap" style="overflow-x:auto">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Type</th><th>Category</th><th>Status</th><th>Date</th><th>Medicines</th><th>Bill</th><th>Doctor</th><th>Actions</th></tr></thead>
+            <tbody id="adminPatientsTable">
+              <tr><td class="mono">101</td><td>Sharu</td><td class="mono">9876543210</td><td><span class="badge badge-blue">Regular</span></td><td><span class="badge badge-green">Outpatient</span></td><td>8 months</td><td class="mono">2025-03-11</td><td>Paracetamol, Vitamin C</td><td class="mono">1,500</td><td>Dr.Shanthi</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit mode — Patient 101')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">102</td><td>Anto</td><td class="mono">9123456789</td><td><span class="badge badge-purple">Occasional</span></td><td><span class="badge badge-green">Outpatient</span></td><td>At delivery</td><td class="mono">2025-03-21</td><td>Ibuprofen</td><td class="mono">5,000</td><td>Dr.Tharu</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit mode — Patient 102')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">103</td><td>Krithika</td><td class="mono">9012345678</td><td><span class="badge badge-blue">Regular</span></td><td><span class="badge badge-amber">Inpatient</span></td><td>Delivered baby girl</td><td class="mono">2025-03-31</td><td>Calcium, Multivitamin</td><td class="mono">25,000</td><td>Dr.Shanthi</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit mode — Patient 103')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">104</td><td>Nithya</td><td class="mono">9988776655</td><td><span class="badge badge-blue">Regular</span></td><td><span class="badge badge-green">Outpatient</span></td><td>General consultation</td><td class="mono">2025-03-11</td><td>Insulin</td><td class="mono">700</td><td>Dr.Krithika</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit mode — Patient 104')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">105</td><td>Sri</td><td class="mono">9988776644</td><td><span class="badge badge-purple">Occasional</span></td><td><span class="badge badge-green">Outpatient</span></td><td>General consultation</td><td class="mono">2025-04-15</td><td>Lisinopril</td><td class="mono">800</td><td>Dr.Shanthi</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit mode — Patient 105')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">106</td><td>Shiva</td><td class="mono">9988776633</td><td><span class="badge badge-blue">Regular</span></td><td><span class="badge badge-amber">Inpatient</span></td><td>Surgery scheduled</td><td class="mono">2025-04-27</td><td>Painkillers, Antibiotics</td><td class="mono">45,000</td><td>Dr.Tharu</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit mode — Patient 106')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Create Patient -->
+      <div id="a-add-patient" class="panel">
+        <div class="panel-header"><div class="panel-title">Create Patient</div></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Patient ID</label><input class="form-input" id="aRegId" placeholder="e.g. 107" type="text"></div>
+            <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="aRegName" placeholder="Patient name" type="text"></div>
+            <div class="form-group"><label class="form-label">Birthdate</label><input class="form-input" id="aRegDob" placeholder="YYYY-MM-DD" type="text"></div>
+            <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="aRegPhone" placeholder="Phone number" type="text"></div>
+            <div class="form-group"><label class="form-label">Type</label><select class="form-input" id="aRegType"><option>Regular</option><option>Occasional</option></select></div>
+            <div class="form-group"><label class="form-label">Category</label><select class="form-input" id="aRegCategory"><option>Outpatient</option><option>Inpatient</option></select></div>
+            <div class="form-group"><label class="form-label">Status</label><input class="form-input" id="aRegStatus" placeholder="e.g. General consultation" type="text"></div>
+            <div class="form-group"><label class="form-label">Appointment Date</label><input class="form-input" id="aRegDate" placeholder="YYYY-MM-DD" type="text"></div>
+            <div class="form-group"><label class="form-label">Follow-up / Stay</label><input class="form-input" id="aRegFollowup" placeholder="e.g. 10" type="text"></div>
+            <div class="form-group"><label class="form-label">Medicines</label><input class="form-input" id="aRegMeds" placeholder="e.g. Paracetamol" type="text"></div>
+            <div class="form-group"><label class="form-label">Bill (Rs.)</label><input class="form-input" id="aRegBill" placeholder="e.g. 500" type="number"></div>
+            <div class="form-group"><label class="form-label">Doctor ID</label><select class="form-input" id="aRegDoctor"><option value="D1">D1 - Dr.Shanthi</option><option value="D2">D2 - Dr.Tharu</option><option value="D3">D3 - Dr.Kumar</option><option value="D4">D4 - Dr.Krithika</option><option value="D5">D5 - Dr.Tharun</option></select></div>
+          </div>
+          <button class="form-submit" onclick="adminCreatePatient()">Add Patient</button>
+          <div class="success-msg" id="aRegSuccess">✅ Patient added successfully!</div>
+        </div>
+      </div>
+
+      <!-- Doctors -->
+      <div id="a-doctors" class="panel">
+        <div class="panel-header"><div class="panel-title">Doctors</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Specialization</th><th>Experience</th><th>Salary (Rs.)</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">D1</td><td>Dr.Shanthi</td><td><span class="badge badge-purple">Gynaecologist</span></td><td>5 yrs</td><td class="mono">90,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Doctor D1')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">D2</td><td>Dr.Tharu</td><td><span class="badge badge-blue">Gen. Physician</span></td><td>5 yrs</td><td class="mono">85,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Doctor D2')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">D3</td><td>Dr.Kumar</td><td><span class="badge badge-red">Cardiologist</span></td><td>7 yrs</td><td class="mono">95,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Doctor D3')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">D4</td><td>Dr.Krithika</td><td><span class="badge badge-green">Pediatrician</span></td><td>3 yrs</td><td class="mono">88,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Doctor D4')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">D5</td><td>Dr.Tharun</td><td><span class="badge badge-amber">Orthopedic</span></td><td>5 yrs</td><td class="mono">92,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Doctor D5')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Nurses -->
+      <div id="a-nurses" class="panel">
+        <div class="panel-header"><div class="panel-title">Nurses</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Assisting Doctor</th><th>Salary (Rs.)</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">N1</td><td>Mimi</td><td>D1 – Dr.Shanthi</td><td class="mono">15,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Nurse N1')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">N2</td><td>John</td><td>D2 – Dr.Tharu</td><td class="mono">15,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Nurse N2')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">N3</td><td>Sarah</td><td>D3 – Dr.Kumar</td><td class="mono">16,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Nurse N3')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Receptionists -->
+      <div id="a-receptionists" class="panel">
+        <div class="panel-header"><div class="panel-title">Receptionists</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Salary (Rs.)</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">R1</td><td>Meena</td><td class="mono">20,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Receptionist R1')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">R2</td><td>Raj</td><td class="mono">20,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Receptionist R2')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pharmacists -->
+      <div id="a-pharmacists" class="panel">
+        <div class="panel-header"><div class="panel-title">Pharmacists</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Salary (Rs.)</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">Ph1</td><td>Pharmacist 1</td><td class="mono">18,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Pharmacist Ph1')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+              <tr><td class="mono">Ph2</td><td>Pharmacist 2</td><td class="mono">18,000</td><td><button class="action-btn action-btn-edit" onclick="showToast('Edit Pharmacist Ph2')">Edit</button> <button class="action-btn action-btn-delete" onclick="showToast('Delete requires confirmation','error')">Delete</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Blood Bank -->
+      <div id="a-bloodbank" class="panel">
+        <div class="panel-header"><div class="panel-title">Blood Bank</div><div class="panel-sub">Current blood group inventory</div></div>
+        <div class="blood-grid" id="bloodGrid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Medicine Stock -->
+      <div id="a-medicines" class="panel">
+        <div class="panel-header"><div class="panel-title">Medicine Stock</div></div>
+        <div class="medicine-list" id="adminMedicineList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── TOAST ─── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── DATA ───
+const CREDENTIALS = {
+  patient: { id: '101', pass: '2006-11-21' },
+  doctor:  { id: 'D1',  pass: 'Sha@16D1' },
+  nurse:   { id: 'N1',  pass: 'Nu#456' },
+  receptionist: { id: 'R1', pass: 'Re!789' },
+  pharmacist:   { id: 'Ph1', pass: 'Ph@789' },
+  admin:   { pass: 'Ad$999' }
+};
+
+const BLOOD_DATA = [
+  { type: 'A+', units: 10 }, { type: 'A-', units: 5 },
+  { type: 'B+', units: 8 },  { type: 'B-', units: 3 },
+  { type: 'O+', units: 12 }, { type: 'O-', units: 4 },
+  { type: 'AB+', units: 6 }, { type: 'AB-', units: 2 }
+];
+
+const MEDICINES = [
+  { name: 'Paracetamol', qty: 100 }, { name: 'Ibuprofen', qty: 50 },
+  { name: 'Vitamin C', qty: 75 },    { name: 'Iron Tablets', qty: 40 },
+  { name: 'Calcium', qty: 60 },      { name: 'Multivitamin', qty: 45 },
+  { name: 'Insulin', qty: 30 },      { name: 'Lisinopril', qty: 25 },
+  { name: 'Antibiotics', qty: 80 },  { name: 'Painkillers', qty: 65 }
+];
+
+const JOURNEYS = [
+  { id:101, name:'Sharu', doctor:'Dr.Shanthi', date:'2025-03-11', followup:'10 days', meds:'Paracetamol, Vitamin C', bill:'Rs.1500', records:['Initial consultation with Dr. Shanthi','Biopsy','BP: 123, Temp: 123, HR: 123'], procs:['Biopsy'] },
+  { id:102, name:'Anto',     doctor:'Dr.Tharu',   date:'2025-03-21', followup:'Last visit: 2025-01-21', meds:'Ibuprofen',           bill:'Rs.5000',  records:['Check-up with Dr. Tharun'], procs:[] },
+  { id:103, name:'Krithika', doctor:'Dr.Shanthi', date:'2025-03-31', followup:'Stayed: 5 days',         meds:'Calcium, Multivitamin', bill:'Rs.25000', records:['Admitted to ward 30','Biopsy'], procs:['Appendectomy','Biopsy'] },
+  { id:104, name:'Nithya',   doctor:'Dr.Krithika',date:'2025-03-11', followup:'12 days',                meds:'Insulin',            bill:'Rs.700',   records:['Initial registration','Initial consultation with Dr. Krithika'], procs:[] },
+  { id:105, name:'Sri',      doctor:'Dr.Shanthi', date:'2025-04-15', followup:'Last visit: 2025-03-03', meds:'Lisinopril',         bill:'Rs.800',   records:['Initial registration','Check-up with Dr. Shanthi'], procs:[] },
+  { id:106, name:'Shiva',    doctor:'Dr.Tharu',   date:'2025-04-27', followup:'Stayed: 10 days',        meds:'Painkillers, Antibiotics', bill:'Rs.45000', records:['Initial registration','Admitted to ward 234'], procs:['Hysterectomy'] },
+];
+
+// ─── STATE ───
+let currentRole = '';
+
+// ─── AUTH MODAL ───
+function openAuthModal(role) {
+  currentRole = role;
+  const modal = document.getElementById('authModal');
+  const title = document.getElementById('modalTitle');
+  const fields = document.getElementById('modalFields');
+  const err = document.getElementById('modalError');
+  err.style.display = 'none';
+
+  const labels = { patient:'Patient', doctor:'Doctor', nurse:'Nurse', receptionist:'Receptionist', pharmacist:'Pharmacist', admin:'Admin' };
+  title.textContent = labels[role] + ' Login';
+
+  if (role === 'admin') {
+    fields.innerHTML = `<div class="form-group"><label class="form-label">Admin Password</label><input class="form-input" id="authPass" type="password" placeholder="Enter password"></div>`;
+  } else {
+    const idLabel = role === 'patient' ? 'Patient ID' : (role.charAt(0).toUpperCase() + role.slice(1) + ' ID');
+    const passLabel = role === 'patient' ? 'Date of Birth (YYYY-MM-DD)' : 'Password';
+    const passType = role === 'patient' ? 'text' : 'password';
+    fields.innerHTML = `
+      <div class="form-group"><label class="form-label">${idLabel}</label><input class="form-input" id="authId" type="text" placeholder="Enter ID"></div>
+      <div class="form-group"><label class="form-label">${passLabel}</label><input class="form-input" id="authPass" type="${passType}" placeholder="Enter ${passLabel.toLowerCase()}"></div>`;
+  }
+  modal.classList.add('open');
+
+  // Allow Enter key
+  setTimeout(() => {
+    document.querySelectorAll('#modalFields .form-input').forEach(inp => {
+      inp.addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
+    });
+  }, 100);
+}
+
+function closeModal() {
+  document.getElementById('authModal').classList.remove('open');
+}
+
+function handleLogin() {
+  const err = document.getElementById('modalError');
+  const pass = document.getElementById('authPass')?.value.trim();
+  const idEl = document.getElementById('authId');
+  const id = idEl?.value.trim();
+  const creds = CREDENTIALS[currentRole];
+
+  let valid = false;
+  if (currentRole === 'admin') {
+    valid = (pass === creds.pass);
+  } else {
+    valid = (id === creds.id && pass === creds.pass);
+  }
+
+  if (!valid) {
+    err.style.display = 'block';
+    err.textContent = 'Invalid credentials! Please try again.';
+    return;
+  }
+
+  closeModal();
+  showDashboard(currentRole);
+}
+
+function showDashboard(role) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const map = {
+    patient: 'patientDash', doctor: 'doctorDash', nurse: 'nurseDash',
+    receptionist: 'receptionistDash', pharmacist: 'pharmacistDash', admin: 'adminDash'
+  };
+  document.getElementById(map[role]).classList.add('active');
+  if (role === 'admin') {
+    buildBloodGrid();
+    buildMedicineLists();
+    buildJourney();
+  }
+  if (role === 'pharmacist') {
+    buildMedicineLists();
+  }
+}
+
+function logout() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('loginScreen').classList.add('active');
+}
+
+// ─── PANEL SWITCHING ───
+function switchPanel(navEl, panelId) {
+  const sidebar = navEl.closest('.sidebar');
+  sidebar.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  navEl.classList.add('active');
+
+  const content = navEl.closest('.dashboard').querySelector('.main-content');
+  content.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById(panelId);
+  if (target) target.classList.add('active');
+}
+
+// ─── FORM ACTIONS ───
+function prescribeMedicine() {
+  const pid = document.getElementById('prescribePatientId').value;
+  const med = document.getElementById('prescribeMedicine').value;
+  if (!pid || !med) { showToast('Please fill all fields', 'error'); return; }
+  showSuccess('prescribeSuccess');
+}
+function updateStatus() {
+  const pid = document.getElementById('statusPatientId').value;
+  const st = document.getElementById('statusNew').value;
+  if (!pid) { showToast('Patient not found!', 'error'); return; }
+  showSuccess('statusSuccess');
+}
+function updateVitals() {
+  const pid = document.getElementById('vitalsPatientId').value;
+  if (!pid) { showToast('Please enter Patient ID', 'error'); return; }
+  showSuccess('vitalsSuccess');
+  showToast('Vitals updated successfully!');
+}
+function registerPatient() {
+  const name = document.getElementById('regName').value;
+  if (!name) { showToast('Please fill required fields', 'error'); return; }
+  showSuccess('regSuccess');
+}
+function scheduleAppointment() {
+  const pid = document.getElementById('schedPatientId').value;
+  if (!pid) { showToast('Please fill required fields', 'error'); return; }
+  showSuccess('schedSuccess');
+}
+function processPayment() {
+  const pid = document.getElementById('payPatientId').value;
+  const amt = document.getElementById('payAmount').value;
+  if (!pid || !amt) { showToast('Please fill all fields', 'error'); return; }
+  showSuccess('paySuccess');
+}
+function adminCreatePatient() {
+  const name = document.getElementById('aRegName').value;
+  if (!name) { showToast('Please fill required fields', 'error'); return; }
+  showSuccess('aRegSuccess');
+  showToast('Patient added to system!');
+}
+function dispenseMedicine() {
+  const pid = document.getElementById('dispPatientId').value;
+  if (!pid) { showToast('Enter Patient ID', 'error'); return; }
+  showSuccess('dispSuccess');
+}
+function updateStock() {
+  const qty = document.getElementById('stockQty').value;
+  if (!qty) { showToast('Enter quantity', 'error'); return; }
+  showSuccess('stockSuccess');
+}
+
+// ─── BUILD BLOOD GRID ───
+function buildBloodGrid() {
+  const grid = document.getElementById('bloodGrid');
+  const max = 12;
+  grid.innerHTML = BLOOD_DATA.map(b => {
+    const pct = Math.round((b.units / max) * 100);
+    return `<div class="blood-card">
+      <div class="blood-type">${b.type}</div>
+      <div class="blood-units">${b.units}</div>
+      <div class="blood-label">units available</div>
+      <div class="blood-bar"><div class="blood-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── BUILD MEDICINE LISTS ───
+function buildMedicineLists() {
+  const maxQty = 100;
+  const html = MEDICINES.map(m => {
+    const pct = Math.round((m.qty / maxQty) * 100);
+    const color = m.qty < 30 ? '#ef4444' : m.qty < 50 ? '#f59e0b' : '#10b981';
+    return `<div class="medicine-row">
+      <div class="medicine-name">${m.name}</div>
+      <div class="medicine-bar-wrap"><div class="medicine-bar" style="width:${pct}%;background:${color}"></div></div>
+      <div class="medicine-stock">${m.qty}</div>
+    </div>`;
+  }).join('');
+  const ml = document.getElementById('medicineList');
+  const aml = document.getElementById('adminMedicineList');
+  if (ml) ml.innerHTML = html;
+  if (aml) aml.innerHTML = html;
+}
+
+// ─── BUILD JOURNEY ───
+function buildJourney() {
+  const list = document.getElementById('journeyList');
+  list.innerHTML = JOURNEYS.map(j => {
+    const records = j.records.map(r => `<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-text">${r}</div></div>`).join('');
+    const procs = j.procs.length ? j.procs.map(p => `<div class="timeline-item"><div class="timeline-dot" style="background:var(--warn)"></div><div class="timeline-text">${p}</div></div>`).join('') : '<div class="timeline-text" style="color:var(--muted);font-size:12px">No procedures</div>';
+    return `<div class="journey-card">
+      <div class="journey-header">
+        <div><div class="journey-patient">${j.name}</div><div class="journey-id">ID: ${j.id} | Doctor: ${j.doctor}</div></div>
+        <div style="text-align:right">
+          <div style="font-size:13px;color:var(--accent3)">${j.bill}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">${j.date}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div class="detail-key" style="margin-bottom:8px">Medical Records</div>
+          <div class="journey-timeline">${records}</div>
+        </div>
+        <div>
+          <div class="detail-key" style="margin-bottom:8px">Procedures</div>
+          <div class="journey-timeline">${procs}</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap">
+        <div><span style="color:var(--muted);font-size:11px">MEDICINES: </span><span style="font-size:12px">${j.meds}</span></div>
+        <div><span style="color:var(--muted);font-size:11px">FOLLOW-UP: </span><span style="font-size:12px">${j.followup}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── HELPERS ───
+function showSuccess(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+let toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = (type === 'success' ? '✅ ' : '⚠️ ') + msg;
+  t.className = 'toast' + (type === 'error' ? ' error' : '');
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.display = 'none', 3000);
+}
+</script>
+</body>
+</html>
